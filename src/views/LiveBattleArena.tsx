@@ -525,7 +525,10 @@ export const LiveBattleArena: React.FC = () => {
                 <option value="javascript">JavaScript (ES6)</option>
                 <option value="python">Python 3</option>
                 <option value="java">Java 17</option>
+                <option value="c">C (GCC)</option>
                 <option value="cpp">C++ 20</option>
+                <option value="ruby">Ruby</option>
+                <option value="go">Golang</option>
               </select>
 
               <span className="spacer" />

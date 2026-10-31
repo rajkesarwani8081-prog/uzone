@@ -24,6 +24,12 @@ export const LeetCodeEditor: React.FC<LeetCodeEditorProps> = ({
         return 'text/x-java';
       case 'cpp':
         return 'text/x-c++src';
+      case 'c':
+        return 'text/x-csrc';
+      case 'ruby':
+        return 'ruby';
+      case 'go':
+        return 'text/x-go';
       case 'python':
         return 'python';
       case 'javascript':

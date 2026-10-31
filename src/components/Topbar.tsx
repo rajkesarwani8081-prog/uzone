@@ -66,7 +66,7 @@ export const Topbar: React.FC = () => {
     return meta[page] || ['UzoneQuiz', 'Learn. Test. Level up.'];
   };
 
-  const [title, subtitle] = getPageMeta();
+  const [title] = getPageMeta();
 
   return (
     <header className="topbar">
@@ -81,7 +81,6 @@ export const Topbar: React.FC = () => {
 
       <div className="top-title">
         <h1>{title}</h1>
-        <p>{subtitle}</p>
       </div>
 
       <label className="top-search" aria-label="Global search">

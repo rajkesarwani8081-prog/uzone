@@ -18,8 +18,9 @@ import {
 } from 'lucide-react';
 import { useApp } from '../context/AppContext';
 import { codingProblems } from '../data/codingProblems';
-import { composeJsProgram, judgeResult } from '../data/codingHarness';
+import { composeJsProgram, judgeResult, getProblemStarter, executeProblemTests } from '../data/codingHarness';
 import { LeetCodeEditor } from '../components/LeetCodeEditor';
+import { CodingLanguage } from '../types';
 
 export const CodingWorkspaceView: React.FC = () => {
   const { activeCodingProblemId, setActiveCodingProblemId, setPage, addToast, logMistakeFromCoding } = useApp();
@@ -27,8 +28,8 @@ export const CodingWorkspaceView: React.FC = () => {
   const problem = codingProblems.find((p) => p.id === activeCodingProblemId) || codingProblems[0];
   const problemIndex = codingProblems.indexOf(problem);
 
-  const [language, setLanguage] = useState<'javascript' | 'python'>(() => {
-    return (localStorage.getItem('uzone-code-lang') as any) || 'javascript';
+  const [language, setLanguage] = useState<CodingLanguage>(() => {
+    return (localStorage.getItem('uzone-code-lang') as CodingLanguage) || 'javascript';
   });
 
   const [code, setCode] = useState<string>('');
@@ -50,13 +51,13 @@ export const CodingWorkspaceView: React.FC = () => {
     if (!problem) return;
     const key = `uzone-code:${problem.id}:${language}`;
     const saved = localStorage.getItem(key);
-    setCode(saved !== null ? saved : problem.starter[language] || '');
+    setCode(saved !== null ? saved : getProblemStarter(problem, language));
     setResults(null);
     setConsoleTab('testcase');
     setActiveCase(0);
   }, [problem?.id, language]);
 
-  const handleLanguageChange = (lang: 'javascript' | 'python') => {
+  const handleLanguageChange = (lang: CodingLanguage) => {
     setLanguage(lang);
     localStorage.setItem('uzone-code-lang', lang);
   };
@@ -71,10 +72,19 @@ export const CodingWorkspaceView: React.FC = () => {
 
   const handleResetStarter = () => {
     if (!problem) return;
-    const starter = problem.starter[language] || '';
+    const starter = getProblemStarter(problem, language);
     setCode(starter);
     localStorage.removeItem(`uzone-code:${problem.id}:${language}`);
-    addToast('Code reset', `Restored ${language === 'javascript' ? 'JavaScript' : 'Python 3'} starter.`, 'rotate-ccw');
+    const langNames: Record<CodingLanguage, string> = {
+      javascript: 'JavaScript',
+      python: 'Python 3',
+      java: 'Java',
+      c: 'C',
+      cpp: 'C++',
+      ruby: 'Ruby',
+      go: 'Golang',
+    };
+    addToast('Code reset', `Restored ${langNames[language]} starter.`, 'rotate-ccw');
   };
 
   const handleNav = (dir: number) => {
@@ -190,29 +200,57 @@ export const CodingWorkspaceView: React.FC = () => {
 
           worker.postMessage({ program, tests: problem.tests });
         } else {
-          // Python simulated judge fallback with evaluation
-          const isStarter = code.trim() === (problem.starter.python || '').trim();
-          const allPassed = !isStarter;
-          const evaluatedCases = problem.tests.map((test) => ({
-            pass: allPassed,
-            status: allPassed ? 'ok' : 'error',
-            value: allPassed ? test.expected : null,
-            error: isStarter ? 'NotImplementedError: pass statement encountered' : undefined,
-          }));
+          // Multi-language evaluation for Python, Java, C, C++, Ruby, Golang
+          executeProblemTests(problem, code, language).then((outcome) => {
+            const evaluatedCases = outcome.cases.map((c) => {
+              let val: any = null;
+              if (c.actual !== undefined) {
+                try {
+                  val = JSON.parse(c.actual);
+                } catch {
+                  val = c.actual;
+                }
+              }
+              return {
+                pass: c.pass,
+                status: c.pass ? 'ok' : 'error',
+                value: val,
+                logs: c.logs,
+                error: c.error,
+              };
+            });
 
-          setResults({
-            verdict: allPassed ? 'Accepted' : 'Wrong Answer',
-            totalMs: 42,
-            cases: evaluatedCases,
+            setResults({
+              verdict: outcome.verdict,
+              totalMs: outcome.totalMs,
+              cases: evaluatedCases,
+            });
+            setIsRunning(false);
+
+            if (isSubmit) {
+              const allPassed = outcome.verdict === 'Accepted';
+              const progress = JSON.parse(localStorage.getItem('uzone-coding-progress') || '{}');
+              progress[problem.id] = allPassed ? 'solved' : 'attempted';
+              localStorage.setItem('uzone-coding-progress', JSON.stringify(progress));
+              addToast(
+                allPassed ? 'Accepted!' : 'Test cases failed',
+                allPassed ? `${language.toUpperCase()} solution recorded as solved.` : 'Check the differences in the console.',
+                allPassed ? 'circle-check' : 'circle-alert'
+              );
+            }
+          }).catch((err: any) => {
+            setResults({
+              verdict: 'Runtime Error',
+              totalMs: 1,
+              cases: problem.tests.map(() => ({
+                pass: false,
+                status: 'error',
+                value: null,
+                error: err.message || String(err),
+              })),
+            });
+            setIsRunning(false);
           });
-          setIsRunning(false);
-
-          if (isSubmit && allPassed) {
-            const progress = JSON.parse(localStorage.getItem('uzone-coding-progress') || '{}');
-            progress[problem.id] = 'solved';
-            localStorage.setItem('uzone-coding-progress', JSON.stringify(progress));
-            addToast('Accepted!', 'Python solution recorded as solved.', 'circle-check');
-          }
         }
       } catch (err: any) {
         setResults({
@@ -235,7 +273,7 @@ export const CodingWorkspaceView: React.FC = () => {
     const failedCaseIndex = results.cases.findIndex((c) => !c.pass);
     const targetCase = failedCaseIndex >= 0 ? results.cases[failedCaseIndex] : results.cases[0];
     const targetTest = failedCaseIndex >= 0 ? problem.tests[failedCaseIndex] : problem.tests[0];
-    const targetSolution = language === 'javascript' ? problem.solution.javascript : problem.solution.python;
+    const targetSolution = (problem.solution as any)[language] || problem.solution.javascript;
 
     logMistakeFromCoding({
       problemId: problem.id,
@@ -426,15 +464,26 @@ export const CodingWorkspaceView: React.FC = () => {
                   <span>Space {problem.complexity.space}</span>
                 </div>
 
-                {(['javascript', 'python'] as const).map((lang) => (
-                  <details key={lang} className="lc-solution-code">
-                    <summary>
-                      <CodeXml size={13} /> Reference solution —{' '}
-                      {lang === 'javascript' ? 'JavaScript' : 'Python 3'}
-                    </summary>
-                    <pre>{problem.solution[lang]}</pre>
-                  </details>
-                ))}
+                {([
+                  { key: 'javascript', label: 'JavaScript' },
+                  { key: 'python', label: 'Python 3' },
+                  { key: 'java', label: 'Java' },
+                  { key: 'cpp', label: 'C++' },
+                  { key: 'c', label: 'C' },
+                  { key: 'ruby', label: 'Ruby' },
+                  { key: 'go', label: 'Golang' },
+                ] as const).map(({ key, label }) => {
+                  const sol = (problem.solution as any)[key];
+                  if (!sol) return null;
+                  return (
+                    <details key={key} className="lc-solution-code">
+                      <summary>
+                        <CodeXml size={13} /> Reference solution — {label}
+                      </summary>
+                      <pre>{sol}</pre>
+                    </details>
+                  );
+                })}
               </>
             )}
           </div>
@@ -449,11 +498,16 @@ export const CodingWorkspaceView: React.FC = () => {
               <select
                 className="lc-lang-select"
                 value={language}
-                onChange={(e) => handleLanguageChange(e.target.value as any)}
+                onChange={(e) => handleLanguageChange(e.target.value as CodingLanguage)}
                 aria-label="Language"
               >
                 <option value="javascript">JavaScript</option>
                 <option value="python">Python 3</option>
+                <option value="java">Java</option>
+                <option value="c">C</option>
+                <option value="cpp">C++</option>
+                <option value="ruby">Ruby</option>
+                <option value="go">Golang</option>
               </select>
               <span className="spacer"></span>
               <button

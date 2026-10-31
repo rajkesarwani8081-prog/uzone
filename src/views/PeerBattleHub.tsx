@@ -183,36 +183,6 @@ export const PeerBattleHub: React.FC = () => {
         </div>
       </div>
 
-      {/* Metrics Row */}
-      <div className="metrics-grid" style={{ marginBottom: '20px' }}>
-        <div className="metric-card">
-          <span className="metric-label">Enrolled Class</span>
-          <strong className="metric-value">Batch {userBatch}</strong>
-          <span className="metric-delta">Course Isolation Active</span>
-        </div>
-        <div className="metric-card">
-          <span className="metric-label">Battle Record</span>
-          <strong className="metric-value">
-            {myWins}W - {myLosses}L
-          </strong>
-          <span className="metric-delta positive">
-            {myCompletedBattles.length > 0
-              ? `${Math.round((myWins / myCompletedBattles.length) * 100)}% Win Rate`
-              : 'Ready for first duel'}
-          </span>
-        </div>
-        <div className="metric-card">
-          <span className="metric-label">Available Sets</span>
-          <strong className="metric-value">{availableBattleSets.length} Sets</strong>
-          <span className="metric-delta">Teacher-curated pool</span>
-        </div>
-        <div className="metric-card">
-          <span className="metric-label">Class Peers</span>
-          <strong className="metric-value">{enrolledClassmates.length} Ready</strong>
-          <span className="metric-delta">Same course syllabus</span>
-        </div>
-      </div>
-
       {/* Navigation Tabs */}
       <div className="lc-toolbar" style={{ marginBottom: '20px' }}>
         <button

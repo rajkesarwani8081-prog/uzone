@@ -456,10 +456,13 @@ export const CodingQuizAttemptView: React.FC = () => {
                   onChange={(e) => handleLanguageSelect(e.target.value as CodingLanguage)}
                   aria-label="Language selector"
                 >
-                  <option value="java">Java</option>
-                  <option value="python">Python 3</option>
-                  <option value="cpp">C++</option>
                   <option value="javascript">JavaScript</option>
+                  <option value="python">Python 3</option>
+                  <option value="java">Java</option>
+                  <option value="c">C</option>
+                  <option value="cpp">C++</option>
+                  <option value="ruby">Ruby</option>
+                  <option value="go">Golang</option>
                 </select>
               </div>
 

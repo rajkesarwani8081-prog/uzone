@@ -218,6 +218,7 @@ export function getProblemStarter(problem: CodingProblem, lang: CodingLanguage):
     return `class Solution {\n    public ${retType} ${problem.functionName}(${paramTypes}) {\n        // Write your Java solution here\n        \n    }\n}`;
   }
   if (lang === 'cpp') {
+    if (problem.starter.cpp) return problem.starter.cpp;
     if (problem.judge === 'design') {
       return `#include <vector>\n#include <string>\nusing namespace std;\n\nclass ${problem.functionName} {\npublic:\n    ${problem.functionName}() {\n        \n    }\n};`;
     }
@@ -230,6 +231,44 @@ export function getProblemStarter(problem: CodingProblem, lang: CodingLanguage):
     }).join(', ');
     const retType = problem.resultStructure === 'list' ? 'vector<int>' : 'int';
     return `#include <vector>\n#include <string>\n#include <unordered_map>\n#include <algorithm>\nusing namespace std;\n\nclass Solution {\npublic:\n    ${retType} ${problem.functionName}(${paramTypes}) {\n        // Write your C++ solution here\n        \n    }\n};`;
+  }
+  if (lang === 'c') {
+    if (problem.starter.c) return problem.starter.c;
+    if (problem.judge === 'design') {
+      return `#include <stdio.h>\n#include <stdlib.h>\n#include <stdbool.h>\n#include <string.h>\n\ntypedef struct {\n    // Data structures for ${problem.functionName}\n} ${problem.functionName};\n\n${problem.functionName}* ${problem.functionName.toLowerCase()}Create() {\n    ${problem.functionName}* obj = (${problem.functionName}*)malloc(sizeof(${problem.functionName}));\n    return obj;\n}\n\nvoid ${problem.functionName.toLowerCase()}Free(${problem.functionName}* obj) {\n    free(obj);\n}`;
+    }
+    const paramTypes = problem.params.map(p => {
+      if (p.toLowerCase().includes('matrix') || p.toLowerCase().includes('grid')) return 'int** ' + p + ', int ' + p + 'Size, int* ' + p + 'ColSize';
+      if (p.toLowerCase().includes('num') || p.toLowerCase().includes('arr')) return 'int* ' + p + ', int ' + p + 'Size';
+      if (p.toLowerCase().includes('s') || p.toLowerCase().includes('str')) return 'char* ' + p;
+      if (p.toLowerCase().includes('target') || p.toLowerCase().includes('k') || p.toLowerCase().includes('n') || p.toLowerCase().includes('val')) return 'int ' + p;
+      return 'int ' + p;
+    }).join(', ');
+    const retType = problem.resultStructure === 'list' ? 'int*' : 'int';
+    const retSizeParam = problem.resultStructure === 'list' ? (paramTypes ? ', int* returnSize' : 'int* returnSize') : '';
+    return `#include <stdio.h>\n#include <stdlib.h>\n#include <stdbool.h>\n#include <string.h>\n\n/**\n * Note: The returned array must be malloced, assume caller calls free().\n */\n${retType} ${problem.functionName}(${paramTypes}${retSizeParam}) {\n    // Write your C solution here\n    \n}`;
+  }
+  if (lang === 'ruby') {
+    if (problem.starter.ruby) return problem.starter.ruby;
+    if (problem.judge === 'design') {
+      return `class ${problem.functionName}\n  def initialize\n    \n  end\nend`;
+    }
+    return `# @param {${problem.params.map(() => 'Object').join(', ')}}\n# @return {Object}\ndef ${problem.functionName}(${problem.params.join(', ')})\n  # Write your Ruby solution here\n  \nend`;
+  }
+  if (lang === 'go') {
+    if (problem.starter.go) return problem.starter.go;
+    if (problem.judge === 'design') {
+      return `package main\n\ntype ${problem.functionName} struct {\n    \n}\n\nfunc Constructor() ${problem.functionName} {\n    return ${problem.functionName}{}\n}`;
+    }
+    const paramTypes = problem.params.map(p => {
+      if (p.toLowerCase().includes('matrix') || p.toLowerCase().includes('grid')) return p + ' [][]int';
+      if (p.toLowerCase().includes('num') || p.toLowerCase().includes('arr')) return p + ' []int';
+      if (p.toLowerCase().includes('s') || p.toLowerCase().includes('str')) return p + ' string';
+      if (p.toLowerCase().includes('target') || p.toLowerCase().includes('k') || p.toLowerCase().includes('n') || p.toLowerCase().includes('val')) return p + ' int';
+      return p + ' int';
+    }).join(', ');
+    const retType = problem.resultStructure === 'list' ? '[]int' : 'int';
+    return `package main\n\nfunc ${problem.functionName}(${paramTypes}) ${retType} {\n    // Write your Go solution here\n    \n}`;
   }
   return problem.starter.javascript;
 }
@@ -407,7 +446,7 @@ export async function executeProblemTests(
       // Check basic syntax safety
       const openBraces = (trimmed.match(/{/g) || []).length;
       const closeBraces = (trimmed.match(/}/g) || []).length;
-      if (lang !== 'python' && Math.abs(openBraces - closeBraces) > 1) {
+      if (lang !== 'python' && lang !== 'ruby' && Math.abs(openBraces - closeBraces) > 1) {
         resolve({
           verdict: 'Runtime Error',
           totalMs: 8,
@@ -424,8 +463,30 @@ export async function executeProblemTests(
         return;
       }
 
-      // Check for return statement
-      const hasReturn = /\breturn\b/.test(trimmed) || problem.judge === 'inplace' || problem.judge === 'design';
+      // Check ruby block delimiters
+      if (lang === 'ruby') {
+        const defCount = (trimmed.match(/\b(def|class)\b/g) || []).length;
+        const endCount = (trimmed.match(/\bend\b/g) || []).length;
+        if (defCount > 0 && endCount < defCount) {
+          resolve({
+            verdict: 'Runtime Error',
+            totalMs: 8,
+            cases: problem.tests.map((t, i) => ({
+              caseIndex: i,
+              pass: false,
+              status: 'Syntax Error',
+              input: formatArgsDisplay(problem, t.args),
+              expected: JSON.stringify(t.expected),
+              error: 'SyntaxError: unexpected end-of-input, expected keyword_end',
+              executionTimeMs: 1,
+            })),
+          });
+          return;
+        }
+      }
+
+      // Check for return statement (Ruby supports implicit returns)
+      const hasReturn = lang === 'ruby' || /\breturn\b/.test(trimmed) || problem.judge === 'inplace' || problem.judge === 'design';
       if (!hasReturn) {
         resolve({
           verdict: 'Wrong Answer',

@@ -4,7 +4,7 @@ export type AppTheme = 'light' | 'dark' | 'aurora';
 
 export type QuizType = 'mcq' | 'coding';
 
-export type CodingLanguage = 'java' | 'python' | 'cpp' | 'javascript';
+export type CodingLanguage = 'javascript' | 'python' | 'java' | 'c' | 'cpp' | 'ruby' | 'go';
 
 export type AppPage =
   | 'dashboard'
@@ -186,13 +186,19 @@ export interface CodingProblem {
     javascript: string;
     python: string;
     java?: string;
+    c?: string;
     cpp?: string;
+    ruby?: string;
+    go?: string;
   };
   solution: {
     javascript: string;
     python: string;
     java?: string;
+    c?: string;
     cpp?: string;
+    ruby?: string;
+    go?: string;
   };
   approach: string;
   complexity: {

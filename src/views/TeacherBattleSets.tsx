@@ -185,30 +185,6 @@ export const TeacherBattleSets: React.FC = () => {
         </div>
       </div>
 
-      {/* Metrics Row */}
-      <div className="metrics-grid" style={{ marginBottom: '22px' }}>
-        <div className="metric-card">
-          <span className="metric-label">Published Battle Sets</span>
-          <strong className="metric-value">{battleSets.filter((s) => s.status === 'Published').length}</strong>
-          <span className="metric-delta">Available for enrolled students</span>
-        </div>
-        <div className="metric-card">
-          <span className="metric-label">Total Student Battles</span>
-          <strong className="metric-value">{totalBattlesFought + 14}</strong>
-          <span className="metric-delta positive">High engagement</span>
-        </div>
-        <div className="metric-card">
-          <span className="metric-label">Enrolled Batches</span>
-          <strong className="metric-value">Batch 5.0 & 4.0</strong>
-          <span className="metric-delta">Strict course isolation</span>
-        </div>
-        <div className="metric-card">
-          <span className="metric-label">Avg. Duel Duration</span>
-          <strong className="metric-value">25 mins</strong>
-          <span className="metric-delta">Head-to-head sprint</span>
-        </div>
-      </div>
-
       {/* Filters & Search */}
       <div className="lc-toolbar" style={{ marginBottom: '16px' }}>
         <button
